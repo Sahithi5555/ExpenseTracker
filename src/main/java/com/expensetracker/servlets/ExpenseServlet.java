@@ -2,15 +2,14 @@ package com.expensetracker.servlets;
 
 import java.io.*;
 import java.sql.*;
+import java.util.*;
 import jakarta.servlet.*;
 import jakarta.servlet.http.*;
+import com.expensetracker.util.DBConnection; // ✅ using your working connection class
 
 public class ExpenseServlet extends HttpServlet {
 
-    private static final String URL = "jdbc:mysql://localhost:3306/expensetracker";
-    private static final String USER = "root"; // change if your MySQL username is different
-    private static final String PASSWORD = ""; // enter your MySQL password here
-
+    // ✅ Handles adding a new expense
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
@@ -22,19 +21,16 @@ public class ExpenseServlet extends HttpServlet {
         response.setContentType("text/html");
         PrintWriter out = response.getWriter();
 
-        try {
-            Class.forName("com.mysql.cj.jdbc.Driver");
-            Connection conn = DriverManager.getConnection(URL, USER, PASSWORD);
+        try (Connection conn = DBConnection.getConnection()) {
             String sql = "INSERT INTO expenses (category, amount, date) VALUES (?, ?, ?)";
             PreparedStatement stmt = conn.prepareStatement(sql);
             stmt.setString(1, category);
             stmt.setDouble(2, Double.parseDouble(amount));
             stmt.setDate(3, Date.valueOf(date));
             stmt.executeUpdate();
-            conn.close();
 
-            out.println("<h3 style='color:green;'>Expense added successfully!</h3>");
-            request.getRequestDispatcher("index.jsp").include(request, response);
+            // ✅ Redirect to view.jsp after successful insertion
+            response.sendRedirect("ExpenseServlet"); // triggers doGet()
 
         } catch (Exception e) {
             e.printStackTrace(out);
@@ -42,32 +38,37 @@ public class ExpenseServlet extends HttpServlet {
         }
     }
 
+    // ✅ Handles viewing all expenses
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
-        response.setContentType("text/html");
-        PrintWriter out = response.getWriter();
-
-        try {
-            Class.forName("com.mysql.cj.jdbc.Driver");
-            Connection conn = DriverManager.getConnection(URL, USER, PASSWORD);
+        try (Connection conn = DBConnection.getConnection()) {
             Statement stmt = conn.createStatement();
             ResultSet rs = stmt.executeQuery("SELECT * FROM expenses");
 
-            out.println("<h2>All Expenses</h2>");
-            out.println("<table border='1'><tr><th>ID</th><th>Category</th><th>Amount</th><th>Date</th></tr>");
+            // Store results in a List for JSP
+            List<String[]> expenses = new ArrayList<>();
 
             while (rs.next()) {
-                out.println("<tr><td>" + rs.getInt("id") + "</td><td>"
-                        + rs.getString("category") + "</td><td>"
-                        + rs.getDouble("amount") + "</td><td>"
-                        + rs.getDate("date") + "</td></tr>");
+                String[] row = {
+                    String.valueOf(rs.getInt("id")),
+                    rs.getString("category"),
+                    String.valueOf(rs.getDouble("amount")),
+                    String.valueOf(rs.getDate("date"))
+                };
+                expenses.add(row);
             }
-            out.println("</table>");
-            conn.close();
+
+            // Send data to view.jsp
+            request.setAttribute("expensesList", expenses);
+            System.out.println("✅ Found " + expenses.size() + " expenses in database.");
+            RequestDispatcher dispatcher = request.getRequestDispatcher("view.jsp");
+            dispatcher.forward(request, response);
 
         } catch (Exception e) {
+            response.setContentType("text/html");
+            PrintWriter out = response.getWriter();
             e.printStackTrace(out);
             out.println("<h3 style='color:red;'>Error: " + e.getMessage() + "</h3>");
         }

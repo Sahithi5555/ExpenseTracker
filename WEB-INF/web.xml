@@ -1,0 +1,16 @@
+<servlet>
+    <servlet-name>ExpenseServlet</servlet-name>
+    <servlet-class>com.expensetracker.servlets.ExpenseServlet</servlet-class>
+</servlet>
+
+<!-- POST request: Add new expense -->
+<servlet-mapping>
+    <servlet-name>ExpenseServlet</servlet-name>
+    <url-pattern>/addExpense</url-pattern>
+</servlet-mapping>
+
+<!-- GET request: View all expenses -->
+<servlet-mapping>
+    <servlet-name>ExpenseServlet</servlet-name>
+    <url-pattern>/viewExpenses</url-pattern>
+</servlet-mapping>
